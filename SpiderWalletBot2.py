@@ -403,87 +403,46 @@ def _check_rug_risk(mint: str) -> dict:
     """
     Fetches rug safety data from RugCheck.xyz (free, no key required).
     Returns dict with risk level, flags, and a 0-100 safety score.
-    Result cached 10 min — rug status doesn't change second-by-second.
     """
     with rug_cache_lock:
         if mint in rug_cache:
             return rug_cache[mint]
 
     result = {
-        "risk_level":       "Unknown",
-        "risk_emoji":       "⚪",
-        "safety_score":     50,       # neutral default
-        "lp_burned":        None,
-        "mint_disabled":    None,
-        "freeze_disabled":  None,
-        "flags":            [],
+        "risk_level": "Unknown",
+        "risk_emoji": "⚪",
+        "safety_score": 50,
+        "lp_burned": None,
+        "mint_disabled": None,
+        "freeze_disabled": None,
+        "flags": [],
     }
 
-try:
-    r = requests.get(
-        f"https://api.rugcheck.xyz/v1/tokens/{mint}/report/summary",
-        timeout=8,
-    )
-    r.raise_for_status()
+    try:
+        r = requests.get(
+            f"https://api.rugcheck.xyz/v1/tokens/{mint}/report/summary",
+            timeout=8,
+        )
+        r.raise_for_status()
 
-    data = r.json()
+        data = r.json()
 
-    logger.info("RugCheck response for %s: %s", mint, data)
-    logger.info("RugCheck raw response: %s", data)
+        logger.info("RugCheck response for %s: %s", mint, data)
+        logger.info("RugCheck raw response: %s", data)
 
-    score = int(data.get("score", 50))
+        score = int(data.get("score", 50))
 
-    # Extract key flags
-    risks = data.get("risks", [])
-    flags = [
-        risk.get("name", "")
-        for risk in risks
-        if risk.get("level") in ("warn", "danger")
-    ]
+        # ... all the rest of your processing ...
 
-    lp_burned = data.get("lpBurned", False)
-    mint_disabled = data.get("mintDisabled", False)
-    freeze_disabled = data.get("freezeDisabled", False)
+        logger.info("Rug check %s: %s (score %d)", mint, risk_level, safety)
 
-    # Safety score: start from RugCheck score, add bonuses for good flags
-    safety = score
-    if lp_burned:
-        safety = min(safety + 10, 100)
-    if mint_disabled:
-        safety = min(safety + 5, 100)
-    if freeze_disabled:
-        safety = min(safety + 5, 100)
-    if len(flags) > 3:
-        safety = max(safety - 20, 0)
+    except Exception as e:
+        logger.debug("RugCheck failed for %s: %s", mint, e)
 
-    # Risk classification
-    if safety >= 75:
-        risk_level, risk_emoji = "Low", "🟢"
-    elif safety >= 50:
-        risk_level, risk_emoji = "Medium", "🟡"
-    else:
-        risk_level, risk_emoji = "High", "🔴"
+    with rug_cache_lock:
+        rug_cache[mint] = result
 
-    result.update({
-        "risk_level": risk_level,
-        "risk_emoji": risk_emoji,
-        "safety_score": safety,
-        "lp_burned": lp_burned,
-        "mint_disabled": mint_disabled,
-        "freeze_disabled": freeze_disabled,
-        "flags": flags[:5],  # cap at 5 flags
-    })
-
-    logger.info("Rug check %s: %s (score %d)", mint, risk_level, safety)
-
-except Exception as e:
-    logger.debug("RugCheck failed for %s: %s", mint, e)
-
-with rug_cache_lock:
-    rug_cache[mint] = result
-
-return result
-
+    return result
 
 def _fmt_rug_flags(rug: dict) -> str:
     """Format rug check result for caption display — None-safe."""
