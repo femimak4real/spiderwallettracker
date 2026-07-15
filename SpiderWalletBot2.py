@@ -1506,10 +1506,32 @@ def _process_tx(tx: dict, ts: int):
                     except KeyError: pass
                 should_buy_alert = False
 
-            if should_buy_alert:
-                rug        = _check_rug_risk(mint)
-                grade_data = _grade_signal(unique, price_data, buy_times, rug, adaptive_thresh)
-                trade      = _trade_assistant(price_data, rug)
+if should_buy_alert:
+    rug = _check_rug_risk(mint)
+
+    logger.info("DEBUG rug object: %s", rug)
+
+    if rug is None:
+        logger.error("Rug check returned None for %s", mint)
+        rug = {
+            "risk_level": "Unknown",
+            "risk_emoji": "⚪",
+            "safety_score": 50,
+            "lp_burned": None,
+            "mint_disabled": None,
+            "freeze_disabled": None,
+            "flags": [],
+        }
+
+    grade_data = _grade_signal(
+        unique,
+        price_data,
+        buy_times,
+        rug,
+        adaptive_thresh,
+    )
+
+    trade = _trade_assistant(price_data, rug)
 
                 # ── Intelligence hooks: lifecycle DB + leader/follower edges ──
                 try:
