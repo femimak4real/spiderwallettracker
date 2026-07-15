@@ -922,13 +922,20 @@ def _start_refresh_scheduler():
         scheduler.add_job(_run_discovery_job, "interval",
                           hours=12, id="wallet_discovery")
         try:
-            from apscheduler.triggers.cron import CronTrigger
-            scheduler.add_job(send_daily_report),
- CronTrigger(hour=0, minute=0, timezone=pytz.timezone("Africa/Lagos")
+    from apscheduler.triggers.cron import CronTrigger
+    import pytz
 
-)
-        except Exception:
-            pass
+    scheduler.add_job(
+        send_daily_report,
+        CronTrigger(
+            hour=0,
+            minute=0,
+            timezone=pytz.timezone("Africa/Lagos")
+        ),
+        id="daily_report"
+    )
+except Exception:
+    pass
         scheduler.start()
         logger.info(
             "⏰ Scheduler started — refresh %dh, lifecycle %ds, risk-monitor %ds, "
