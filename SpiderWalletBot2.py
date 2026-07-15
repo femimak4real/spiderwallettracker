@@ -479,10 +479,10 @@ try:
 except Exception as e:
     logger.debug("RugCheck failed for %s: %s", mint, e)
 
-    with rug_cache_lock:
-        rug_cache[mint] = result
+with rug_cache_lock:
+    rug_cache[mint] = result
 
-    return result
+return result
 
 
 def _fmt_rug_flags(rug: dict) -> str:
