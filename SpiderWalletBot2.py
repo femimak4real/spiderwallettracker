@@ -923,7 +923,8 @@ def _start_refresh_scheduler():
         try:
             from apscheduler.triggers.cron import CronTrigger
             scheduler.add_job(send_daily_report,
-                              CronTrigger(hour=0, minute=0), id="daily_report")
+                              CronTrigger(hour=0, minute=0, timezone=pytz.timezone("Africa/Lagos")
+)
         except Exception:
             pass
         scheduler.start()
