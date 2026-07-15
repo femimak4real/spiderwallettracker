@@ -425,8 +425,11 @@ def _check_rug_risk(mint: str) -> dict:
             timeout=8,
         )
         r.raise_for_status()
-        data  = r.json()
-        score = int(data.get("score", 50))    # RugCheck score: higher = safer
+data = r.json()
+
+logger.info("RugCheck response for %s: %s", mint, data)
+
+score = int(data.get("score", 50))    # RugCheck score: higher = safer
 
         # Extract key flags
         risks = data.get("risks", [])
