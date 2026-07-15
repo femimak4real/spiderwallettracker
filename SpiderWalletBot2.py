@@ -427,7 +427,7 @@ def _check_rug_risk(mint: str) -> dict:
         r.raise_for_status()
 data = r.json()
 
-logger.info("RugCheck raw response: %s", data)
+logger.info("RugCheck raw response for %s: %s", mint, data)
 
 score = int(data.get("score", 50))    # RugCheck score: higher = safer
 
