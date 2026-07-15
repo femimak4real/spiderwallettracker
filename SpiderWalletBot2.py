@@ -1494,64 +1494,48 @@ def _process_tx(tx: dict, ts: int):
             if should_buy_alert:
                 alerted_tokens[mint] = ts
 
-if should_buy_alert:
-    rug = _check_rug_risk(mint)
+        if should_buy_alert:
+            price_data = _get_token_price(mint)
 
-    logger.info("DEBUG rug object: %s", rug)
+            # Market cap gate
+            mcap = price_data.get("market_cap") or 0
+            if mcap > MAX_MCAP:
+                logger.info(f"Skipping {symbol} — mcap ${mcap:,.0f} > MAX_MCAP")
+                with activity_lock:
+                    try:
+                        del alerted_tokens[mint]
+                    except KeyError:
+                        pass
+                should_buy_alert = False
 
-    if rug is None:
-        logger.error("Rug check returned None for %s", mint)
-        rug = {
-            "risk_level": "Unknown",
-            "risk_emoji": "🟡",
-            "safety_score": 50,
-            "lp_burned": None,
-            "mint_disabled": None,
-            "freeze_disabled": None,
-            "flags": [],
-        }
+            if should_buy_alert:
+                rug = _check_rug_risk(mint)
 
-    grade_data = _grade_signal(
-        unique,
-        price_data,
-        buy_times,
-        rug,
-        adaptive_thresh,
-    )
+                logger.info("DEBUG rug object: %s", rug)
 
-    trade = _trade_assistant(price_data, rug)
+                if rug is None:
+                    logger.error("Rug check returned None for %s", mint)
+                    rug = {
+                        "risk_level": "Unknown",
+                        "risk_emoji": "🟡",
+                        "safety_score": 50,
+                        "lp_burned": None,
+                        "mint_disabled": None,
+                        "freeze_disabled": None,
+                        "flags": [],
+                    }
 
-    try:
-        wi.upsert_token_lifecycle(
-            mint,
-            symbol,
-            price_data.get("price") or 0,
-            price_data.get("market_cap") or 0,
-            ts,
-            liquidity=price_data.get("liquidity_usd"),
-            price_change_5m=price_data.get("price_change_5m"),
-        )
-
-        wi.compute_leader_follower_edges(mint)
-
-        # Set the drawdown/stop-loss/rug baseline
-        stop_price = None
-        if trade.get("available"):
-            try:
-                stop_price = price_data.get("price", 0) * (
-                    1 - trade["sl_pct"] / 100
+                grade_data = _grade_signal(
+                    unique,
+                    price_data,
+                    buy_times,
+                    rug,
+                    adaptive_thresh,
                 )
-            except Exception:
-                stop_price = None
 
-        wi.set_trade_plan(
-            mint,
-            stop_loss_price=stop_price,
-            initial_liquidity=price_data.get("liquidity_usd"),
-        )
+                trade = _trade_assistant(price_data, rug)
 
-    except Exception as e:
-        logger.debug("Intelligence alert hooks failed for %s: %s", mint, e)
+                # ... your lifecycle try/except goes here ...
 
     # ── SELL detection ────────────────────────────────────────────────────────
     # Exit alert fires ONCE when the SAME wallets that triggered the buy alert
