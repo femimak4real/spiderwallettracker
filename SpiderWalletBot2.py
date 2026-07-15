@@ -22,7 +22,7 @@ Solana Wallet Convergence Alert Bot  — SpiderWalletBot
 - Visual card with PIL, safe HTML captions (text fallback if PIL fails)
 """
 
-import os, time, logging, math, requests, threading, io, importlib, asyncio
+import os, time, logging, math, requests, threading, io, importlib
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from flask import Flask, request, jsonify
@@ -87,12 +87,12 @@ else:
 
 # Alert tuning
 THRESHOLD        = 6      # base wallet count threshold (adaptive adjusts ±1)
-WINDOW           = 180    # seconds — buy convergence window (2 minutes)
-ALERT_COOLDOWN   = 900    # seconds — suppress repeat buy alerts per token
-SELL_WINDOW      = 86400    # seconds — sell convergence window
-MIN_HOLD_TIME    = 600    # seconds — minimum time after buy alert before sell alert fires
-FAST_DUMP_MIN_SELLERS = 4  # if this many original buy wallets sell together, alert bypasses MIN_HOLD_TIME
-MAX_MCAP         = 3_000_000  # USD — skip tokens already above this market cap
+WINDOW           = 120    # seconds — buy convergence window (2 minutes)
+ALERT_COOLDOWN   = 600    # seconds — suppress repeat buy alerts per token
+SELL_WINDOW      = 3600    # seconds — sell convergence window
+MIN_HOLD_TIME    = 3600    # seconds — minimum time after buy alert before sell alert fires
+FAST_DUMP_MIN_SELLERS = 3  # if this many original buy wallets sell together, alert bypasses MIN_HOLD_TIME
+MAX_MCAP         = 300_000  # USD — skip tokens already above this market cap
 REFRESH_HOURS    = 720    # 30 days — one webhook registration per month
 
 # Wallet ranking weights
@@ -101,27 +101,27 @@ WEIGHTED_TRIGGER = 6.5    # total weighted score needed to fire alert
 MIN_LIQUIDITY = 75_000     # minimum liquidity needed to fire alert
 MIN_BUY_SOL = 3         # minimum buy amount in SOL
 MIN_ELITE_WALLETS = 2         # minimum number of elite wallets to fire alert
-MIN_AI_GRADE = "C"          # minimum AI grade to fire alert (A+ > A > B > C > D)
+MIN_AI_GRADE = "A-"          # minimum AI grade to fire alert (A+ > A > B > C > D)
 
 # Wrapped SOL mint — excluded from token transfer detection
 WSOL_MINT = "So11111111111111111111111111111111111111112"
 
 FALLBACK_WALLETS = [
-    "Bgokg3jutarxEMWQVospwUucSQfpG6Jw27jRbMxcvU2q",
-    "28YSwogXw2JdKLJ8AgK2nWy6k39jpB7hqrhe1AV18QpD",
-    "498SWfPJisr26J4oCiZccyzReFrByNE7jsHwbm3caNma",
-    "CyaE1VxvBrahnPWkqm5VsdCvyS2QmNht2UFrKJHga54o",
-    "97fVD4SLcrcTr16kdgTS9Gq5kJFaP3N2HXAEm1PJRKqv",
+    "69J1Sb3zwbneJzseWSbumyW7Gt1TPCtbZPi4Kg6jmNDt",
+    "9rnDz342q6zMzptbJPnHKzr2aG91yE1hqRzYMXjnaEjS",
+    "2uRz6uBo1TrAApZdfMxRctz4MLAoTCaJHFtmkKqQ4S95",
+    "CheqNivqXubBrojvyuNeaySc5hvKyFyGV6toHm49ivRq",
+    "FL3EJeYP6i7ouTEKCiuW77Rigc2HXd6FyvGfGpnk3X7z",
     "3KvsoNxgn64nsuHKPBHQJsguef3DgEkP2izE49k6CSAZ",
-    "Bi4rd5FH5bYEN8scZ7wevxNZyNmKHdaBcvewdPFxYdLt",
+    "3bvHzPNxn3kDecfMkHsmXhDAvvZt6uJfsC3teUAaLBMg",
     "HxjwdF326ZunmUwC1iXhfgL3ku78YsksN6n7Rfxzwr6b",
     "2QfBNK2WDwSLoUQRb1zAnp3KM12N9hQ8q6ApwUMnWW2T",
     "gtagyESa99t49VmUqnnfsuowYnigSNKuYXdXWyXWNdd",
     "JD6rVaerbyz6wjQ433nrw6bFTgFrp46MiYmi8EtUAfsG",
-    "5gn3uxhsZ7TtLDZwxKXPJuUTB9dEMgnb3oFJ6rKDjoX4",
+    "4jjEXcFPXw7WVGXSTb227HW6wfLprjh2RtiHty4GbetE",
     "Gghj6515zeefxS2Dv7vwSSGyWqtASJFojuLwVMFsc6FN",
-    "2EYVKHYQKC7goT3eB3iCYPp8gKsPVj6QMyUzy1oQay6a",
-    "AQ3MK4mf4i4r3G9rkbAvfoxGP6eZ7yscuiy5Syyuq27U",
+    "7moqFjvm2MwAiMtCZoqYoTAPzRBxxMRT2ddyHThQuWjr",
+    "HU3SkjiHpeNMvRgiYEbfFTWXHwq5CMKn1HCgu4MkkGhE",
     "A7FMMgue4aZmPLLoutVtbC7gJcyqkHybUieiaDg9aaVE",
     "GNoYNXQ66dnTqcR39nKi2QJSizjxvHHAy9GSbNszQuuq",
     "roUteHjDohtkatXTb79PJ99bbxkTipgo3GJ4EJZ1YpB",
@@ -130,18 +130,14 @@ FALLBACK_WALLETS = [
     "UUAhspPgUdGuXUnokmxERH1VvNGNh1ouN3mfcbfV8yd",
     "eLLnsiBsWvERB34kgiJ4wPhdRzqM17gMG4cHouMqaHz",
     "8pY1AukbuPgUE3EetyLa59rFLMimJGT94ZzbMEZcQF4w",
-    "77eg8ZALn2CuEs2ErACpBsuzcG5nRoDkK2eyrGQNfxD2",
-    "3xBmQQijfUghKXmnvjUKFEwrobxV2gmz2mYvFPoLoG4C",
+    "MRiYA4oN3158fCV8evhuCofrDzbHyYvYnGZUDJvoCsa",
+    "CatyeC3LgBxub7HcpW2n7cZZZ66CUKdcZ8DzHucHrSiP",
     "Ft6fZtTtL5EJANevdXwcSvD4Lum8QMTMepF9zjvFPh2X",
     "CQwT1byuHgjKnL6vzmuNaAywKfDBVxDmFVgsQDBWxcWt",
     "yUwUyoufLrCmjcgURefVzvAfpcaZ2so6be4uDziT9aH",
     "8NQ32SyFKD1d5kenq4oM8Da6C6J9TQSMW1uAgFRveEQr",
-    "pau23UpU2BFwF4JZrLxAnf4ZqgnD3xLnz6ESu7vPsao",
-    "EDBvw6czdnJMWP1ZXRTrAArE4ha1FoND2E34cDKHtV3J",
-    "54qjvmfmUkcfsQm6aJURegHPcvB2QjY8z2w6ZkFx2cjc",
-    "EciGzv86MdB6zLHkoLPLiAyU37BQmpJyY7yQb7SPG9zS",
-    "6qudAN2kV8mtCcYJxb5QQ6Vr15itdHHdeVbYm99NKMhy",
-    "4iaJQWCdr9iBqh2DUDVhaf5DeLi1mZBZLHanvbTLGFbv",
+    "Gpji3gCNBywt89bYr3z5GcQC32rs8qDBy7iiHzEEvrGC",
+
 ]
 # ═══════════════════════════════════════════════════════════════════════════════
 #  INTERNALS
@@ -700,15 +696,16 @@ def refresh_wallets():
             f"👛 Watching <b>{len(new_wallets)} wallets</b>\n\n"
             f"{status_str}"
         )
-try:
-    asyncio.run(
+
+    try:
         bot.send_message(
             chat_id=CHAT_ID,
             text=f"🕷 <b>SpiderWalletBot Started</b>\n\n{stats_block}",
             parse_mode="HTML",
-    )
-except TelegramError as e:
-    logger.error("Startup message failed: %s", e)
+        )
+    except TelegramError as e:
+        logger.error("Startup message failed: %s", e)
+
 
 def _run_lifecycle_updater_job():
     """Background pass: refresh prices for active tokens, update ATH/ROI/2x-5x-10x."""
