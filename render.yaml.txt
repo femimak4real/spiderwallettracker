@@ -1,0 +1,38 @@
+services:
+  - type: web
+    name: spider-wallet-bot
+    runtime: python
+    plan: starter                 # bump if you need more RAM/CPU
+    region: oregon                # pick whatever's closest to you
+    branch: main
+    buildCommand: pip install -r requirements.txt
+    # --workers 1 is NOT optional: wallet lists, TTL caches, the dedup cache,
+    # and the APScheduler jobs all live in this one process's memory. Running
+    # more than one gunicorn worker would silently split traffic across
+    # processes with different state (duplicate alerts, missed dedup, the
+    # scheduler firing once per worker). --threads gives you concurrency
+    # instead, matching the existing ThreadPoolExecutor(8) in the app.
+    startCommand: gunicorn --workers 1 --threads 8 --timeout 120 --bind 0.0.0.0:$PORT SpiderWalletBot2:app
+    healthCheckPath: /status
+    autoDeploy: true
+    disk:
+      name: spider-wallet-data
+      mountPath: /var/data        # persistent across deploys/restarts
+      sizeGB: 1
+    envVars:
+      - key: TELEGRAM_TOKEN
+        sync: false                # set manually in the Render dashboard — never in git
+      - key: CHAT_ID
+        sync: false
+      - key: HELIUS_API_KEY
+        sync: false
+      - key: WEBHOOK_SECRET
+        sync: false
+      - key: TROJAN_REF_CODE
+        sync: false
+      - key: WALLET_INTEL_DB
+        value: /var/data/wallet_intel.db
+      # APP_URL is intentionally omitted — Render auto-injects
+      # RENDER_EXTERNAL_URL, which the app reads automatically.
+      - key: PYTHON_VERSION
+        value: 3.12.3
