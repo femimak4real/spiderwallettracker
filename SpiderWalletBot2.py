@@ -1494,18 +1494,6 @@ def _process_tx(tx: dict, ts: int):
             if should_buy_alert:
                 alerted_tokens[mint] = ts
 
-        if should_buy_alert:
-            price_data = _get_token_price(mint)
-
-            # Market cap gate — use flag not continue so other tokens in same tx still process
-            mcap = price_data.get("market_cap") or 0
-            if mcap > MAX_MCAP:
-                logger.info(f"Skipping {symbol} — mcap ${mcap:,.0f} > MAX_MCAP")
-                with activity_lock:
-                    try:    del alerted_tokens[mint]
-                    except KeyError: pass
-                should_buy_alert = False
-
 if should_buy_alert:
     rug = _check_rug_risk(mint)
 
@@ -1515,7 +1503,7 @@ if should_buy_alert:
         logger.error("Rug check returned None for %s", mint)
         rug = {
             "risk_level": "Unknown",
-            "risk_emoji": "⚪",
+            "risk_emoji": "🟡",
             "safety_score": 50,
             "lp_burned": None,
             "mint_disabled": None,
@@ -1532,6 +1520,22 @@ if should_buy_alert:
     )
 
     trade = _trade_assistant(price_data, rug)
+
+    try:
+        wi.upsert_token_lifecycle(
+            mint,
+            symbol,
+            price_data.get("price") or 0,
+            price_data.get("market_cap") or 0,
+            ts,
+            liquidity=price_data.get("liquidity_usd"),
+            price_change_5m=price_data.get("price_change_5m"),
+        )
+
+        wi.compute_leader_follower_edges(mint)
+
+    except Exception:
+        logger.exception("Lifecycle update failed")
 
                 # ── Intelligence hooks: lifecycle DB + leader/follower edges ──
                 try:
