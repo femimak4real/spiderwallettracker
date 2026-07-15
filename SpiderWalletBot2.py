@@ -700,18 +700,15 @@ def refresh_wallets():
             f"👛 Watching <b>{len(new_wallets)} wallets</b>\n\n"
             f"{status_str}"
         )
-
 try:
     asyncio.run(
         bot.send_message(
             chat_id=CHAT_ID,
             text=f"🕷 <b>SpiderWalletBot Started</b>\n\n{stats_block}",
             parse_mode="HTML",
-        )
     )
 except TelegramError as e:
     logger.error("Startup message failed: %s", e)
-
 
 def _run_lifecycle_updater_job():
     """Background pass: refresh prices for active tokens, update ATH/ROI/2x-5x-10x."""
