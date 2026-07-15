@@ -22,7 +22,7 @@ Solana Wallet Convergence Alert Bot  — SpiderWalletBot
 - Visual card with PIL, safe HTML captions (text fallback if PIL fails)
 """
 
-import os, time, logging, math, requests, threading, io, importlib
+import os, time, logging, math, requests, threading, io, importlib, asyncio
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from flask import Flask, request, jsonify
@@ -701,14 +701,16 @@ def refresh_wallets():
             f"{status_str}"
         )
 
-    try:
+try:
+    asyncio.run(
         bot.send_message(
             chat_id=CHAT_ID,
             text=f"🕷 <b>SpiderWalletBot Started</b>\n\n{stats_block}",
             parse_mode="HTML",
         )
-    except TelegramError as e:
-        logger.error("Startup message failed: %s", e)
+    )
+except TelegramError as e:
+    logger.error("Startup message failed: %s", e)
 
 
 def _run_lifecycle_updater_job():
