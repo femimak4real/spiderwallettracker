@@ -431,10 +431,10 @@ def _check_rug_risk(mint: str) -> dict:
         logger.info("RugCheck raw response: %s", data)
         logger.info("Available RugCheck keys: %s", list(data.keys()))
 
-        # Use the normalized RugCheck score (0-100)
+        # RugCheck normalized score (0-100)
         score = int(data.get("score_normalised", 50))
 
-        # Extract key flags
+        # Extract risk flags
         risks = data.get("risks", [])
         flags = [
             risk.get("name", "")
@@ -442,20 +442,52 @@ def _check_rug_risk(mint: str) -> dict:
             if risk.get("level") in ("warn", "danger")
         ]
 
-        lp_burned = data.get("lpBurned", False)
-        mint_disabled = data.get("mintDisabled", False)
-        freeze_disabled = data.get("freezeDisabled", False)
+        # Liquidity lock %
+        lp_locked_pct = float(data.get("lpLockedPct", 0))
 
-        # Safety score
+        # Some RugCheck responses return score=1 with no risks.
+        # Treat that as incomplete instead of automatically High Risk.
+        if score <= 1 and not risks:
+            logger.warning(
+                "RugCheck returned empty risks with score=%s for %s. Using neutral score.",
+                score, mint
+            )
+            score = 50
+
+        # Optional fields (older API versions may omit these)
+        lp_burned = data.get("lpBurned")
+        mint_disabled = data.get("mintDisabled")
+        freeze_disabled = data.get("freezeDisabled")
+
+        # Build composite safety score
         safety = score
-        if lp_burned:
-            safety = min(safety + 10, 100)
-        if mint_disabled:
-            safety = min(safety + 5, 100)
-        if freeze_disabled:
-            safety = min(safety + 5, 100)
-        if len(flags) > 3:
-            safety = max(safety - 20, 0)
+
+        # LP lock bonus
+        if lp_locked_pct >= 80:
+            safety += 20
+        elif lp_locked_pct >= 50:
+            safety += 10
+        elif lp_locked_pct >= 20:
+            safety += 5
+
+        # Optional bonuses
+        if lp_burned is True:
+            safety += 10
+
+        if mint_disabled is True:
+            safety += 5
+
+        if freeze_disabled is True:
+            safety += 5
+
+        # Penalty for many warnings
+        if len(flags) >= 4:
+            safety -= 20
+        elif len(flags) >= 2:
+            safety -= 10
+
+        # Clamp to 0-100
+        safety = max(0, min(100, safety))
 
         # Risk classification
         if safety >= 75:
@@ -475,28 +507,49 @@ def _check_rug_risk(mint: str) -> dict:
             "flags": flags[:5],
         })
 
-        logger.info("Rug check %s: %s (score %d)", mint, risk_level, safety)
+        logger.info(
+            "Rug check %s: %s (score=%d, lpLocked=%.2f%%, risks=%d)",
+            mint,
+            risk_level,
+            safety,
+            lp_locked_pct,
+            len(flags),
+        )
 
     except Exception as e:
         logger.debug("RugCheck failed for %s: %s", mint, e)
 
-    with rug_cache_lock:
-        rug_cache[mint] = result
-
-    return result
-
 def _fmt_rug_flags(rug: dict) -> str:
     """Format rug check result for caption display — None-safe."""
-    emoji   = rug.get("risk_emoji", "⚪")
-    level   = rug.get("risk_level", "Unknown")
-    lp      = "✅ LP Burned"       if rug.get("lp_burned")       is True else "⚠️ LP Not Burned"
-    mint_st = "✅ Mint Disabled"   if rug.get("mint_disabled")   is True else "⚠️ Mint Active"
-    freeze  = "✅ Freeze Disabled" if rug.get("freeze_disabled") is True else "⚠️ Freeze Active"
-    flags   = ""
+    emoji = rug.get("risk_emoji", "⚪")
+    level = rug.get("risk_level", "Unknown")
+
+    lp = (
+        "✅ LP Mostly Locked"
+        if rug.get("lp_burned") is True
+        else "⚠️ LP Low Lock"
+    )
+
+    mint_st = (
+        "✅ Mint Disabled"
+        if rug.get("mint_disabled") is True
+        else "⚠️ Mint Active"
+    )
+
+    freeze = (
+        "✅ Freeze Disabled"
+        if rug.get("freeze_disabled") is True
+        else "⚠️ Freeze Active"
+    )
+
+    flags = ""
     if rug.get("flags"):
         flags = "\n   ⛳ " + " | ".join(rug["flags"][:3])
-    return f"{emoji} <b>{_esc(level)}</b>   {lp} | {mint_st} | {freeze}{flags}"
 
+    return (
+        f"{emoji} <b>{_esc(level)}</b>   "
+        f"{lp} | {mint_st} | {freeze}{flags}"
+    )
 
 # ═══════════════════════════════════════════════════════════════════════════════
 #  PRICE FETCHER — DexScreener only
