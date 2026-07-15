@@ -1,6 +1,6 @@
 Flask==3.0.3
 gunicorn==22.0.0
-python-telegram-bot==13.15
+python-telegram-bot==22.0
 urllib3==1.26.18
 requests==2.32.3
 Pillow==10.4.0
