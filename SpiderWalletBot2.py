@@ -87,12 +87,12 @@ else:
 
 # Alert tuning
 THRESHOLD        = 6      # base wallet count threshold (adaptive adjusts ±1)
-WINDOW           = 120    # seconds — buy convergence window (2 minutes)
-ALERT_COOLDOWN   = 600    # seconds — suppress repeat buy alerts per token
-SELL_WINDOW      = 3600    # seconds — sell convergence window
-MIN_HOLD_TIME    = 3600    # seconds — minimum time after buy alert before sell alert fires
-FAST_DUMP_MIN_SELLERS = 3  # if this many original buy wallets sell together, alert bypasses MIN_HOLD_TIME
-MAX_MCAP         = 300_000  # USD — skip tokens already above this market cap
+WINDOW           = 180    # seconds — buy convergence window (2 minutes)
+ALERT_COOLDOWN   = 900    # seconds — suppress repeat buy alerts per token
+SELL_WINDOW      = 86400    # seconds — sell convergence window
+MIN_HOLD_TIME    = 600    # seconds — minimum time after buy alert before sell alert fires
+FAST_DUMP_MIN_SELLERS = 4  # if this many original buy wallets sell together, alert bypasses MIN_HOLD_TIME
+MAX_MCAP         = 3_000_000  # USD — skip tokens already above this market cap
 REFRESH_HOURS    = 720    # 30 days — one webhook registration per month
 
 # Wallet ranking weights
@@ -101,7 +101,7 @@ WEIGHTED_TRIGGER = 6.5    # total weighted score needed to fire alert
 MIN_LIQUIDITY = 75_000     # minimum liquidity needed to fire alert
 MIN_BUY_SOL = 3         # minimum buy amount in SOL
 MIN_ELITE_WALLETS = 2         # minimum number of elite wallets to fire alert
-MIN_AI_GRADE = "A-"          # minimum AI grade to fire alert (A+ > A > B > C > D)
+MIN_AI_GRADE = "C"          # minimum AI grade to fire alert (A+ > A > B > C > D)
 
 # Wrapped SOL mint — excluded from token transfer detection
 WSOL_MINT = "So11111111111111111111111111111111111111112"
