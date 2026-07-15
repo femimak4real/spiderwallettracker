@@ -429,10 +429,51 @@ def _check_rug_risk(mint: str) -> dict:
 
         logger.info("RugCheck response for %s: %s", mint, data)
         logger.info("RugCheck raw response: %s", data)
+        logger.info("Available RugCheck keys: %s", list(data.keys()))
 
-        score = int(data.get("score", 50))
+        # Use the normalized RugCheck score (0-100)
+        score = int(data.get("score_normalised", 50))
 
-        # ... all the rest of your processing ...
+        # Extract key flags
+        risks = data.get("risks", [])
+        flags = [
+            risk.get("name", "")
+            for risk in risks
+            if risk.get("level") in ("warn", "danger")
+        ]
+
+        lp_burned = data.get("lpBurned", False)
+        mint_disabled = data.get("mintDisabled", False)
+        freeze_disabled = data.get("freezeDisabled", False)
+
+        # Safety score
+        safety = score
+        if lp_burned:
+            safety = min(safety + 10, 100)
+        if mint_disabled:
+            safety = min(safety + 5, 100)
+        if freeze_disabled:
+            safety = min(safety + 5, 100)
+        if len(flags) > 3:
+            safety = max(safety - 20, 0)
+
+        # Risk classification
+        if safety >= 75:
+            risk_level, risk_emoji = "Low", "🟢"
+        elif safety >= 50:
+            risk_level, risk_emoji = "Medium", "🟡"
+        else:
+            risk_level, risk_emoji = "High", "🔴"
+
+        result.update({
+            "risk_level": risk_level,
+            "risk_emoji": risk_emoji,
+            "safety_score": safety,
+            "lp_burned": lp_burned,
+            "mint_disabled": mint_disabled,
+            "freeze_disabled": freeze_disabled,
+            "flags": flags[:5],
+        })
 
         logger.info("Rug check %s: %s (score %d)", mint, risk_level, safety)
 
