@@ -419,54 +419,65 @@ def _check_rug_risk(mint: str) -> dict:
         "flags":            [],
     }
 
-    try:
-        r = requests.get(
-            f"https://api.rugcheck.xyz/v1/tokens/{mint}/report/summary",
-            timeout=8,
-        )
-        r.raise_for_status()
-data = r.json()
+try:
+    r = requests.get(
+        f"https://api.rugcheck.xyz/v1/tokens/{mint}/report/summary",
+        timeout=8,
+    )
+    r.raise_for_status()
 
-logger.info("RugCheck raw response for %s: %s", mint, data)
+    data = r.json()
 
-score = int(data.get("score", 50))    # RugCheck score: higher = safer
+    logger.info("RugCheck response for %s: %s", mint, data)
+    logger.info("RugCheck raw response: %s", data)
 
-        # Extract key flags
-        risks = data.get("risks", [])
-        flags = [risk.get("name", "") for risk in risks if risk.get("level") in ("warn", "danger")]
+    score = int(data.get("score", 50))
 
-        lp_burned       = data.get("lpBurned", False)
-        mint_disabled   = data.get("mintDisabled", False)
-        freeze_disabled = data.get("freezeDisabled", False)
+    # Extract key flags
+    risks = data.get("risks", [])
+    flags = [
+        risk.get("name", "")
+        for risk in risks
+        if risk.get("level") in ("warn", "danger")
+    ]
 
-        # Safety score: start from RugCheck score, add bonuses for good flags
-        safety = score
-        if lp_burned:       safety = min(safety + 10, 100)
-        if mint_disabled:   safety = min(safety + 5,  100)
-        if freeze_disabled: safety = min(safety + 5,  100)
-        if len(flags) > 3:  safety = max(safety - 20, 0)
+    lp_burned = data.get("lpBurned", False)
+    mint_disabled = data.get("mintDisabled", False)
+    freeze_disabled = data.get("freezeDisabled", False)
 
-        # Risk classification
-        if safety >= 75:
-            risk_level, risk_emoji = "Low",    "🟢"
-        elif safety >= 50:
-            risk_level, risk_emoji = "Medium", "🟡"
-        else:
-            risk_level, risk_emoji = "High",   "🔴"
+    # Safety score: start from RugCheck score, add bonuses for good flags
+    safety = score
+    if lp_burned:
+        safety = min(safety + 10, 100)
+    if mint_disabled:
+        safety = min(safety + 5, 100)
+    if freeze_disabled:
+        safety = min(safety + 5, 100)
+    if len(flags) > 3:
+        safety = max(safety - 20, 0)
 
-        result.update({
-            "risk_level":      risk_level,
-            "risk_emoji":      risk_emoji,
-            "safety_score":    safety,
-            "lp_burned":       lp_burned,
-            "mint_disabled":   mint_disabled,
-            "freeze_disabled": freeze_disabled,
-            "flags":           flags[:5],    # cap at 5 flags
-        })
-        logger.info("Rug check %s: %s (score %d)", mint, risk_level, safety)
+    # Risk classification
+    if safety >= 75:
+        risk_level, risk_emoji = "Low", "🟢"
+    elif safety >= 50:
+        risk_level, risk_emoji = "Medium", "🟡"
+    else:
+        risk_level, risk_emoji = "High", "🔴"
 
-    except Exception as e:
-        logger.debug("RugCheck failed for %s: %s", mint, e)
+    result.update({
+        "risk_level": risk_level,
+        "risk_emoji": risk_emoji,
+        "safety_score": safety,
+        "lp_burned": lp_burned,
+        "mint_disabled": mint_disabled,
+        "freeze_disabled": freeze_disabled,
+        "flags": flags[:5],  # cap at 5 flags
+    })
+
+    logger.info("Rug check %s: %s (score %d)", mint, risk_level, safety)
+
+except Exception as e:
+    logger.debug("RugCheck failed for %s: %s", mint, e)
 
     with rug_cache_lock:
         rug_cache[mint] = result
