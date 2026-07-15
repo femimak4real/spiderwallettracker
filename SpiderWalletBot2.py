@@ -1534,43 +1534,24 @@ if should_buy_alert:
 
         wi.compute_leader_follower_edges(mint)
 
-    except Exception:
-        logger.exception("Lifecycle update failed")
+        # Set the drawdown/stop-loss/rug baseline
+        stop_price = None
+        if trade.get("available"):
+            try:
+                stop_price = price_data.get("price", 0) * (
+                    1 - trade["sl_pct"] / 100
+                )
+            except Exception:
+                stop_price = None
 
-                # ── Intelligence hooks: lifecycle DB + leader/follower edges ──
-                try:
-                    wi.upsert_token_lifecycle(
-                        mint, symbol, price_data.get("price") or 0,
-                        price_data.get("market_cap") or 0, ts,
-                        liquidity=price_data.get("liquidity_usd"),
-                        price_change_5m=price_data.get("price_change_5m"))
-                    wi.compute_leader_follower_edges(mint)
-                    # Set the drawdown/stop-loss/rug baseline for this trade cycle
-                    # so the risk monitor has a stop price + liquidity reference
-                    # to check against.
-                    stop_price = None
-                    if trade.get("available"):
-                        try:
-                            stop_price = price_data.get("price", 0) * (1 - trade["sl_pct"] / 100)
-                        except Exception:
-                            stop_price = None
-                    wi.set_trade_plan(
-                        mint, stop_loss_price=stop_price,
-                        initial_liquidity=price_data.get("liquidity_usd"))
-                except Exception as e:
-                    logger.debug("Intelligence alert hooks failed for %s: %s", mint, e)
+        wi.set_trade_plan(
+            mint,
+            stop_loss_price=stop_price,
+            initial_liquidity=price_data.get("liquidity_usd"),
+        )
 
-                _record_alert_time()
-                _send_alert(mint, symbol, unique, price_data,
-                            is_sell=False, grade_data=grade_data,
-                            trade=trade, rug=rug)
-
-                with buy_alert_lock:
-                    buy_alert_wallets[mint] = {
-                        "wallets":     frozenset(unique),
-                        "ts":          ts,
-                        "entry_price": price_data.get("price") or 0,
-                    }
+    except Exception as e:
+        logger.debug("Intelligence alert hooks failed for %s: %s", mint, e)
 
     # ── SELL detection ────────────────────────────────────────────────────────
     # Exit alert fires ONCE when the SAME wallets that triggered the buy alert
