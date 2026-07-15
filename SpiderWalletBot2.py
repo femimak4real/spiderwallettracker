@@ -3,7 +3,7 @@ Solana Wallet Convergence Alert Bot  — SpiderWalletBot
 =======================================================
 - 50 wallets (static fallback list, no discovery)
 - Helius enhanced webhook for SWAP events (one webhook, PUT to update)
-- Signature deduplication: TTLCache(maxsize=10000, ttl=3600) — eliminates ~95% duplicate alerts
+- Signature deduplicationc: TTLCache(maxsize=10000, ttl=3600) — eliminates ~95% duplicate alerts
 - Price source: DexScreener only (free, no key, price + mcap + 5m data)
 - Price cache: 5-min TTL with stampede protection
 - Symbol resolution: Helius field → Jupiter token list → DexScreener
@@ -923,7 +923,11 @@ def _start_refresh_scheduler():
         try:
             from apscheduler.triggers.cron import CronTrigger
             scheduler.add_job(send_daily_report,
-                              CronTrigger(hour=0, minute=0, timezone=pytz.timezone("Africa/Lagos")
+ CronTrigger(
+    hour=0,
+    minute=0,
+    timezone=pytz.timezone("Africa/Lagos")
+)
 )
         except Exception:
             pass
