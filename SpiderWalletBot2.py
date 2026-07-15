@@ -88,11 +88,11 @@ else:
 # Alert tuning
 THRESHOLD        = 5      # base wallet count threshold (adaptive adjusts ±1)
 WINDOW           = 180    # seconds — buy convergence window (2 minutes)
-ALERT_COOLDOWN   = 900    # seconds — suppress repeat buy alerts per token
+ALERT_COOLDOWN   = 600    # seconds — suppress repeat buy alerts per token
 SELL_WINDOW      = 86400    # seconds — sell convergence window
-MIN_HOLD_TIME    = 600    # seconds — minimum time after buy alert before sell alert fires
+MIN_HOLD_TIME    = 300    # seconds — minimum time after buy alert before sell alert fires
 FAST_DUMP_MIN_SELLERS = 3  # if this many original buy wallets sell together, alert bypasses MIN_HOLD_TIME
-MIN_MCAP         = 50_000  # Ignore ultra-low-cap tokens (<50kUSD) to reduce scam and noise
+MIN_MCAP         = 50_000  # Ignore ultra-low-cap tokens to reduce scam and noise
 MAX_MCAP         = 5_000_000  # USD — skip tokens already above this market cap
 REFRESH_HOURS    = 720    # 30 days — one webhook registration per month
 
