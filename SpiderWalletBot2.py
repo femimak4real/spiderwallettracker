@@ -1417,42 +1417,36 @@ def _process_tx(tx: dict, ts: int):
     transfers = tx.get("tokenTransfers", [])
 
     # ── BUY detection ─────────────────────────────────────────────────────────
-   bought = []
+    bought = []
 
-for transfer in transfers:
-    if transfer.get("toUserAccount") != wallet:
-        continue
+    for transfer in transfers:
+        if transfer.get("toUserAccount") != wallet:
+            continue
 
-    mint = transfer.get("mint", "").strip()
-    if not mint:
-        continue
+        mint = transfer.get("mint", "").strip()
+        if not mint:
+            continue
 
-    # Ignore common non-meme assets
-    if mint in IGNORED_MINTS:
-        continue
+        # Ignore common non-meme assets
+        if mint in IGNORED_MINTS:
+            continue
 
-    try:
-        amount = float(transfer.get("tokenAmount") or 0)
-    except (TypeError, ValueError):
-        amount = 0
+        try:
+            amount = float(transfer.get("tokenAmount") or 0)
+        except (TypeError, ValueError):
+            amount = 0
 
-    if amount <= 0:
-        continue
+        if amount <= 0:
+            continue
 
-    bought.append(transfer)
+        bought.append(transfer)
 
-for transfer in bought:
-    mint = transfer.get("mint", "").strip()
-    symbol = _resolve_symbol(mint, transfer.get("tokenSymbol"))
+    for transfer in bought:
+        mint = transfer.get("mint", "").strip()
+        symbol = _resolve_symbol(mint, transfer.get("tokenSymbol"))
 
-    with position_lock:
-        wallet_positions.setdefault(wallet, {})[mint] = ts
-
-    # ── Intelligence hooks: launch tracking, buy order, early entry ───────
-    try:
-        wi.record_token_launch(mint, ts, symbol)
-        wi.record_buy_sequence(mint, wallet, ts)
-        wi.compute_early_entry_score(wallet, mint, ts)
+        with position_lock:
+            wallet_positions.setdefault(wallet, {})[mint] = ts
     except Exception as e:
         logger.debug(
             "Intelligence buy hooks failed for %s/%s: %s",
