@@ -1499,19 +1499,19 @@ with activity_lock:
         alerted_tokens[mint] = ts
 
         if should_buy_alert:
-            price_data = _get_token_price(mint)
+    price_data = _get_token_price(mint)
 
-            # Market-cap gate
-            mcap = price_data.get("market_cap") or 0
-            if mcap > MAX_MCAP:
-    logger.info(
-        "Skipping %s — mcap $%s > MAX_MCAP",
-        symbol,
-        f"{mcap:,.0f}",
-    )
-    with activity_lock:
-        alerted_tokens.pop(mint, None)
-    continue
+    # Market-cap gate
+    mcap = price_data.get("market_cap") or 0
+    if mcap > MAX_MCAP:
+        logger.info(
+            "Skipping %s - mcap $%s > MAX_MCAP",
+            symbol,
+            f"{mcap:,.0f}",
+        )
+        with activity_lock:
+            alerted_tokens.pop(mint, None)
+        continue
 
             # Liquidity gate
             liquidity = price_data.get("liquidity_usd") or 0
