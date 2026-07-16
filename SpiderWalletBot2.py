@@ -1457,16 +1457,24 @@ except Exception as e:
         )
 
     adaptive_thresh = _get_adaptive_threshold()  # outside lock — avoids deadlock
-    
-        # ── Intelligence hooks: launch tracking, buy order, early entry ───────
-        try:
-            wi.record_token_launch(mint, ts, symbol)
-            wi.record_buy_sequence(mint, wallet, ts)
-            wi.compute_early_entry_score(wallet, mint, ts)
-        except Exception as e:
-            logger.debug("Intelligence buy hooks failed for %s/%s: %s", wallet, mint, e)
 
-        adaptive_thresh = _get_adaptive_threshold()  # outside lock — avoids deadlock
+with position_lock:
+    wallet_positions.setdefault(wallet, {})[mint] = ts
+
+# ── Intelligence hooks ─────────────────────────────────────
+try:
+    wi.record_token_launch(mint, ts, symbol)
+    wi.record_buy_sequence(mint, wallet, ts)
+    wi.compute_early_entry_score(wallet, mint, ts)
+except Exception as e:
+    logger.debug(
+        "Intelligence buy hooks failed for %s/%s: %s",
+        wallet,
+        mint,
+        e,
+    )
+
+adaptive_thresh = _get_adaptive_threshold()
 
         with activity_lock:
             try:    existing = recent_activity[mint]
