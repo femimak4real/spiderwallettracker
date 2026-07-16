@@ -97,12 +97,12 @@ MAX_MCAP         = 5_000_000  # USD — skip tokens already above this market ca
 REFRESH_HOURS    = 720    # 30 days — one webhook registration per month
 
 # Wallet ranking weights
-MIN_WALLET_SCORE = 0.8    # wallets below this score are ignored in weighted sum
-WEIGHTED_TRIGGER = 6.5    # total weighted score needed to fire alert
-MIN_LIQUIDITY = 75_000     # minimum liquidity needed to fire alert
-MIN_BUY_SOL = 3         # minimum buy amount in SOL
-MIN_ELITE_WALLETS = 2         # minimum number of elite wallets to fire alert
-MIN_AI_GRADE = "A-"          # minimum AI grade to fire alert (A+ > A > B > C > D)
+MIN_WALLET_SCORE = 0.6    # wallets below this score are ignored in weighted sum
+WEIGHTED_TRIGGER = 5.5    # total weighted score needed to fire alert
+MIN_LIQUIDITY = 50_000     # minimum liquidity needed to fire alert
+MIN_BUY_SOL = 1.0         # minimum buy amount in SOL
+MIN_ELITE_WALLETS = 1         # minimum number of elite wallets to fire alert
+MIN_AI_GRADE = "B+"          # minimum AI grade to fire alert (A+ > A > B > C > D)
 
 # Wrapped SOL mint — excluded from token transfer detection
 WSOL_MINT = "So11111111111111111111111111111111111111112"
@@ -334,19 +334,21 @@ def _record_win(wallet: str):
 
 def _get_adaptive_threshold() -> int:
     now = time.time()
+
     with _alert_times_lock:
         recent = [t for t in _alert_times if now - t <= 3600]
         _alert_times.clear()
         _alert_times.extend(recent)
+
     count = len(recent)
-    if count < 6:   return 6   # quiet market — lower bar
-    if count > 7:   return 8   # active market — raise bar
-    return 7                   # normal
 
+    if count < 6:
+        return 5      # quiet market
 
-def _record_alert_time():
-    with _alert_times_lock:
-        _alert_times.append(time.time())
+    if count > 15:
+        return 6      # very busy market
+
+    return 5          # normal market
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
