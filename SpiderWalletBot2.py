@@ -1476,31 +1476,27 @@ with activity_lock:
     unique = {w for (w, _) in entries}
     buy_times = [t for (_, t) in entries]
     already_alerted = mint in alerted_tokens
-    
-    # ── 2. Weighted vote — elite wallets count more ───────────────────
-            weighted_score = _get_weighted_vote(unique)
-            enough_wallets = len(unique) >= adaptive_thresh
-            enough_weight = weighted_score >= WEIGHTED_TRIGGER
 
-            should_buy_alert = (
-                (enough_wallets or enough_weight)
-                and not already_alerted
-            )
+    # ── 2. Weighted vote ─────────────────────────────
+    weighted_score = _get_weighted_vote(unique)
+    enough_wallets = len(unique) >= adaptive_thresh
+    enough_weight = weighted_score >= WEIGHTED_TRIGGER
+    should_buy_alert = (enough_wallets or enough_weight) and not already_alerted
 
-            logger.info(
-                "BUY CHECK | %s | wallets=%d threshold=%d weight=%.2f enough_wallets=%s enough_weight=%s already_alerted=%s should=%s",
-                symbol,
-                len(unique),
-                adaptive_thresh,
-                weighted_score,
-                enough_wallets,
-                enough_weight,
-                already_alerted,
-                should_buy_alert,
-            )
+    logger.info(
+        "BUY CHECK | %s | wallets=%d threshold=%d weight=%.2f enough_wallets=%s enough_weight=%s already_alerted=%s should=%s",
+        symbol,
+        len(unique),
+        adaptive_thresh,
+        weighted_score,
+        enough_wallets,
+        enough_weight,
+        already_alerted,
+        should_buy_alert,
+    )
 
-            if should_buy_alert:
-                alerted_tokens[mint] = ts
+    if should_buy_alert:
+        alerted_tokens[mint] = ts
 
         if should_buy_alert:
             price_data = _get_token_price(mint)
