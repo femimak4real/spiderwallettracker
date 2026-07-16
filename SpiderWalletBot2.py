@@ -1463,17 +1463,21 @@ except Exception as e:
 
 adaptive_thresh = _get_adaptive_threshold()
 
-        with activity_lock:
-            try:    existing = recent_activity[mint]
-            except Exception: existing = []
-            entries = [(w, t) for (w, t) in existing if ts - t <= WINDOW]
-            entries.append((wallet, ts))
-            recent_activity[mint] = entries
-            unique           = {w for (w, _) in entries}
-            buy_times        = [t for (_, t) in entries]
-            already_alerted  = mint in alerted_tokens
+with activity_lock:
+    try:
+        existing = recent_activity[mint]
+    except Exception:
+        existing = []
 
-            # ── 2. Weighted vote — elite wallets count more ───────────────────
+    entries = [(w, t) for (w, t) in existing if ts - t <= WINDOW]
+    entries.append((wallet, ts))
+    recent_activity[mint] = entries
+
+    unique = {w for (w, _) in entries}
+    buy_times = [t for (_, t) in entries]
+    already_alerted = mint in alerted_tokens
+    
+    # ── 2. Weighted vote — elite wallets count more ───────────────────
             weighted_score = _get_weighted_vote(unique)
             enough_wallets = len(unique) >= adaptive_thresh
             enough_weight = weighted_score >= WEIGHTED_TRIGGER
