@@ -1175,7 +1175,6 @@ def _grade_signal(wallets: set, price_data: dict, buy_times: list,
         "rug_score":       rug_score,
     }
 
-
 def _trade_assistant(price_data: dict, rug: dict) -> dict:
     """
     Personal trade assistant — suggests entry, TP1, TP2, stop loss.
@@ -1484,32 +1483,51 @@ for transfer in bought:
             buy_times        = [t for (_, t) in entries]
             already_alerted  = mint in alerted_tokens
 
-            # ── 2. Weighted vote — elite wallets count more ───────────────────
-            weighted_score   = _get_weighted_vote(unique)
-            enough_wallets   = len(unique) >= adaptive_thresh
-            enough_weight    = weighted_score >= WEIGHTED_TRIGGER
-            should_buy_alert = (enough_wallets or enough_weight) and not already_alerted
-            if should_buy_alert:
-                alerted_tokens[mint] = ts
+# ── 2. Weighted vote — elite wallets count more ───────────────────
+weighted_score = _get_weighted_vote(unique)
+enough_wallets = len(unique) >= adaptive_thresh
+enough_weight = weighted_score >= WEIGHTED_TRIGGER
+should_buy_alert = (enough_wallets or enough_weight) and not already_alerted
 
-        if should_buy_alert:
-            price_data = _get_token_price(mint)
+logger.info(
+    "BUY CHECK | %s | wallets=%d threshold=%d weight=%.2f enough_wallets=%s enough_weight=%s already_alerted=%s should=%s",
+    symbol,
+    len(unique),
+    adaptive_thresh,
+    weighted_score,
+    enough_wallets,
+    enough_weight,
+    already_alerted,
+    should_buy_alert,
+)
 
-            # Market cap gate
-            mcap = price_data.get("market_cap") or 0
-            if mcap > MAX_MCAP:
-                logger.info(f"Skipping {symbol} — mcap ${mcap:,.0f} > MAX_MCAP")
-                with activity_lock:
-                    try:
-                        del alerted_tokens[mint]
-                    except KeyError:
-                        pass
-                should_buy_alert = False
+if should_buy_alert:
+    alerted_tokens[mint] = ts
 
-            if should_buy_alert:
-                rug = _check_rug_risk(mint)
+if should_buy_alert:
+    logger.info("PASSED CONSENSUS: %s", symbol)
 
-                logger.info("DEBUG rug object: %s", rug)
+    price_data = _get_token_price(mint)
+
+    logger.info("PRICE DATA %s: %s", symbol, price_data)
+
+    # Market cap gate
+    mcap = price_data.get("market_cap") or 0
+    if mcap > MAX_MCAP:
+        logger.info("Skipping %s — mcap $%,.0f > MAX_MCAP", symbol, mcap)
+        with activity_lock:
+            try:
+                del alerted_tokens[mint]
+            except KeyError:
+                pass
+        should_buy_alert = False
+
+    if should_buy_alert:
+        logger.info("PASSED MARKET CAP: %s", symbol)
+
+        rug = _check_rug_risk(mint)
+
+        logger.info("DEBUG rug object: %s", rug)
 
                 if rug is None:
                     logger.error("Rug check returned None for %s", mint)
