@@ -1449,11 +1449,9 @@ def _process_tx(tx: dict, ts: int):
             wallet_positions.setdefault(wallet, {})[mint] = ts
  
     # ── Intelligence hooks ─────────────────────────────────────
-    try:
+try:
     wi.record_token_launch(mint, ts, symbol)
-    
     wi.record_buy_sequence(mint, wallet, ts)
-    
     wi.compute_early_entry_score(wallet, mint, ts)
 except Exception as e:
     logger.debug(
