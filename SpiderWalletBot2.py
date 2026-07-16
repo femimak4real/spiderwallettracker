@@ -1496,9 +1496,8 @@ with activity_lock:
     )
 
     if should_buy_alert:
-        alerted_tokens[mint] = ts
+    alerted_tokens[mint] = ts
 
-        if should_buy_alert:
     price_data = _get_token_price(mint)
 
     # Market-cap gate
@@ -1513,17 +1512,19 @@ with activity_lock:
             alerted_tokens.pop(mint, None)
         continue
 
-            # Liquidity gate
-            liquidity = price_data.get("liquidity_usd") or 0
-            if liquidity < MIN_LIQUIDITY:
-                logger.info(
-                    "Skipping %s — liquidity $%s < MIN_LIQUIDITY",
-                    symbol,
-                    f"{liquidity:,.0f}",
-                )
-                with activity_lock:
-                    alerted_tokens.pop(mint, None)
-                continue
+    # Liquidity gate
+    liquidity = price_data.get("liquidity_usd") or 0
+    if liquidity < MIN_LIQUIDITY:
+        logger.info(
+            "Skipping %s - liquidity $%s < MIN_LIQUIDITY",
+            symbol,
+            f"{liquidity:,.0f}",
+        )
+        with activity_lock:
+            alerted_tokens.pop(mint, None)
+        continue
+
+    # Continue with remaining buy logic...
 
             rug = _check_rug_risk(mint)
 
