@@ -1504,14 +1504,14 @@ with activity_lock:
             # Market-cap gate
             mcap = price_data.get("market_cap") or 0
             if mcap > MAX_MCAP:
-                logger.info(
-                    "Skipping %s — mcap $%s > MAX_MCAP",
-                    symbol,
-                    f"{mcap:,.0f}",
-                )
-                with activity_lock:
-                    alerted_tokens.pop(mint, None)
-                continue
+    logger.info(
+        "Skipping %s — mcap $%s > MAX_MCAP",
+        symbol,
+        f"{mcap:,.0f}",
+    )
+    with activity_lock:
+        alerted_tokens.pop(mint, None)
+    continue
 
             # Liquidity gate
             liquidity = price_data.get("liquidity_usd") or 0
