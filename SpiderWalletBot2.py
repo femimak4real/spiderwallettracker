@@ -431,10 +431,8 @@ def _check_rug_risk(mint: str) -> dict:
         logger.info("RugCheck raw response: %s", data)
         logger.info("Available RugCheck keys: %s", list(data.keys()))
 
-        # RugCheck normalized score (0-100)
         score = int(data.get("score_normalised", 50))
 
-        # Extract risk flags
         risks = data.get("risks", [])
         flags = [
             risk.get("name", "")
@@ -442,27 +440,22 @@ def _check_rug_risk(mint: str) -> dict:
             if risk.get("level") in ("warn", "danger")
         ]
 
-        # Liquidity lock %
         lp_locked_pct = float(data.get("lpLockedPct", 0))
 
-        # Some RugCheck responses return score=1 with no risks.
-        # Treat that as incomplete instead of automatically High Risk.
         if score <= 1 and not risks:
             logger.warning(
                 "RugCheck returned empty risks with score=%s for %s. Using neutral score.",
-                score, mint
+                score,
+                mint,
             )
             score = 50
 
-        # Optional fields (older API versions may omit these)
         lp_burned = data.get("lpBurned")
         mint_disabled = data.get("mintDisabled")
         freeze_disabled = data.get("freezeDisabled")
 
-        # Build composite safety score
         safety = score
 
-        # LP lock bonus
         if lp_locked_pct >= 80:
             safety += 20
         elif lp_locked_pct >= 50:
@@ -470,7 +463,6 @@ def _check_rug_risk(mint: str) -> dict:
         elif lp_locked_pct >= 20:
             safety += 5
 
-        # Optional bonuses
         if lp_burned is True:
             safety += 10
 
@@ -480,16 +472,13 @@ def _check_rug_risk(mint: str) -> dict:
         if freeze_disabled is True:
             safety += 5
 
-        # Penalty for many warnings
         if len(flags) >= 4:
             safety -= 20
         elif len(flags) >= 2:
             safety -= 10
 
-        # Clamp to 0-100
         safety = max(0, min(100, safety))
 
-        # Risk classification
         if safety >= 75:
             risk_level, risk_emoji = "Low", "🟢"
         elif safety >= 50:
@@ -519,37 +508,11 @@ def _check_rug_risk(mint: str) -> dict:
     except Exception as e:
         logger.debug("RugCheck failed for %s: %s", mint, e)
 
-def _fmt_rug_flags(rug: dict) -> str:
-    """Format rug check result for caption display — None-safe."""
-    emoji = rug.get("risk_emoji", "⚪")
-    level = rug.get("risk_level", "Unknown")
+    # Always cache and return a dictionary
+    with rug_cache_lock:
+        rug_cache[mint] = result
 
-    lp = (
-        "✅ LP Mostly Locked"
-        if rug.get("lp_burned") is True
-        else "⚠️ LP Low Lock"
-    )
-
-    mint_st = (
-        "✅ Mint Disabled"
-        if rug.get("mint_disabled") is True
-        else "⚠️ Mint Active"
-    )
-
-    freeze = (
-        "✅ Freeze Disabled"
-        if rug.get("freeze_disabled") is True
-        else "⚠️ Freeze Active"
-    )
-
-    flags = ""
-    if rug.get("flags"):
-        flags = "\n   ⛳ " + " | ".join(rug["flags"][:3])
-
-    return (
-        f"{emoji} <b>{_esc(level)}</b>   "
-        f"{lp} | {mint_st} | {freeze}{flags}"
-    )
+    return result
 
 # ═══════════════════════════════════════════════════════════════════════════════
 #  PRICE FETCHER — DexScreener only
@@ -1535,7 +1498,62 @@ def _process_tx(tx: dict, ts: int):
 
                 trade = _trade_assistant(price_data, rug)
 
-                # ... your lifecycle try/except goes here ...
+                    # ── Intelligence hooks: lifecycle DB + leader/follower edges ──
+                try:
+                    wi.upsert_token_lifecycle(
+                        mint,
+                        symbol,
+                        price_data.get("price") or 0,
+                        price_data.get("market_cap") or 0,
+                        ts,
+                        liquidity=price_data.get("liquidity_usd"),
+                        price_change_5m=price_data.get("price_change_5m"),
+                    )
+
+                    wi.compute_leader_follower_edges(mint)
+
+                    stop_price = None
+                    if trade.get("available"):
+                        try:
+                            stop_price = (
+                                price_data.get("price", 0)
+                                * (1 - trade["sl_pct"] / 100)
+                            )
+                        except Exception:
+                            stop_price = None
+
+                    wi.set_trade_plan(
+                        mint,
+                        stop_loss_price=stop_price,
+                        initial_liquidity=price_data.get("liquidity_usd"),
+                    )
+
+                except Exception as e:
+                    logger.debug(
+                        "Intelligence alert hooks failed for %s: %s",
+                        mint,
+                        e,
+                    )
+
+                _record_alert_time()
+
+                _send_alert(
+                    mint,
+                    symbol,
+                    unique,
+                    price_data,
+                    is_sell=False,
+                    grade_data=grade_data,
+                    trade=trade,
+                    rug=rug,
+                )
+
+                with buy_alert_lock:
+                    buy_alert_wallets[mint] = {
+                        "wallets": frozenset(unique),
+                        "ts": ts,
+                        "entry_price": price_data.get("price") or 0,
+                    }
 
     # ── SELL detection ────────────────────────────────────────────────────────
     # Exit alert fires ONCE when the SAME wallets that triggered the buy alert
