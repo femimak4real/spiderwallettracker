@@ -1447,7 +1447,8 @@ def _process_tx(tx: dict, ts: int):
 
         with position_lock:
             wallet_positions.setdefault(wallet, {})[mint] = ts
-    except Exception as e:
+ 
+except Exception as e:
         logger.debug(
             "Intelligence buy hooks failed for %s/%s: %s",
             wallet,
