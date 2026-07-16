@@ -1416,19 +1416,52 @@ def _process_tx(tx: dict, ts: int):
     transfers = tx.get("tokenTransfers", [])
 
     # ── BUY detection ─────────────────────────────────────────────────────────
-    bought = [t for t in transfers
-              if t.get("toUserAccount") == wallet and t.get("mint", "") != WSOL_MINT]
+   bought = []
 
-    for transfer in bought:
-        mint = transfer.get("mint", "").strip()
-        if not mint:
-            continue
+for transfer in transfers:
+    if transfer.get("toUserAccount") != wallet:
+        continue
 
-        symbol = _resolve_symbol(mint, transfer.get("tokenSymbol"))
+    mint = transfer.get("mint", "").strip()
+    if not mint:
+        continue
 
-        with position_lock:
-            wallet_positions.setdefault(wallet, {})[mint] = ts
+    # Ignore common non-meme assets
+    if mint in IGNORED_MINTS:
+        continue
 
+    try:
+        amount = float(transfer.get("tokenAmount") or 0)
+    except (TypeError, ValueError):
+        amount = 0
+
+    if amount <= 0:
+        continue
+
+    bought.append(transfer)
+
+for transfer in bought:
+    mint = transfer.get("mint", "").strip()
+    symbol = _resolve_symbol(mint, transfer.get("tokenSymbol"))
+
+    with position_lock:
+        wallet_positions.setdefault(wallet, {})[mint] = ts
+
+    # ── Intelligence hooks: launch tracking, buy order, early entry ───────
+    try:
+        wi.record_token_launch(mint, ts, symbol)
+        wi.record_buy_sequence(mint, wallet, ts)
+        wi.compute_early_entry_score(wallet, mint, ts)
+    except Exception as e:
+        logger.debug(
+            "Intelligence buy hooks failed for %s/%s: %s",
+            wallet,
+            mint,
+            e,
+        )
+
+    adaptive_thresh = _get_adaptive_threshold()  # outside lock — avoids deadlock
+    
         # ── Intelligence hooks: launch tracking, buy order, early entry ───────
         try:
             wi.record_token_launch(mint, ts, symbol)
