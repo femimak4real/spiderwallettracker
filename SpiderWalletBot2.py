@@ -87,41 +87,42 @@ else:
 
 # Alert tuning
 THRESHOLD        = 6      # base wallet count threshold (adaptive adjusts ±1)
-WINDOW           = 120    # seconds — buy convergence window (2 minutes)
-ALERT_COOLDOWN   = 600    # seconds — suppress repeat buy alerts per token
-SELL_WINDOW      = 3600    # seconds — sell convergence window
-MIN_HOLD_TIME    = 3600    # seconds — minimum time after buy alert before sell alert fires
+WINDOW           = 180    # seconds — buy convergence window (2 minutes)
+ALERT_COOLDOWN   = 900    # seconds — suppress repeat buy alerts per token
+SELL_WINDOW      = 86400    # seconds — sell convergence window
+MIN_HOLD_TIME    = 600    # seconds — minimum time after buy alert before sell alert fires
 FAST_DUMP_MIN_SELLERS = 3  # if this many original buy wallets sell together, alert bypasses MIN_HOLD_TIME
-MAX_MCAP         = 300_000  # USD — skip tokens already above this market cap
+MIN_MCAP         = 50_000
+MAX_MCAP         = 5_000_000  # USD — skip tokens already above this market cap
 REFRESH_HOURS    = 720    # 30 days — one webhook registration per month
 
 # Wallet ranking weights
-MIN_WALLET_SCORE = 0.8    # wallets below this score are ignored in weighted sum
-WEIGHTED_TRIGGER = 6.5    # total weighted score needed to fire alert
-MIN_LIQUIDITY = 75_000     # minimum liquidity needed to fire alert
-MIN_BUY_SOL = 3         # minimum buy amount in SOL
-MIN_ELITE_WALLETS = 2         # minimum number of elite wallets to fire alert
-MIN_AI_GRADE = "A-"          # minimum AI grade to fire alert (A+ > A > B > C > D)
+MIN_WALLET_SCORE = 0.6    # wallets below this score are ignored in weighted sum
+WEIGHTED_TRIGGER = 5.5    # total weighted score needed to fire alert
+MIN_LIQUIDITY = 50_000     # minimum liquidity needed to fire alert
+MIN_BUY_SOL = 1.0         # minimum buy amount in SOL
+MIN_ELITE_WALLETS = 1         # minimum number of elite wallets to fire alert
+MIN_AI_GRADE = "B+"          # minimum AI grade to fire alert (A+ > A > B > C > D)
 
 # Wrapped SOL mint — excluded from token transfer detection
 WSOL_MINT = "So11111111111111111111111111111111111111112"
 
 FALLBACK_WALLETS = [
-    "69J1Sb3zwbneJzseWSbumyW7Gt1TPCtbZPi4Kg6jmNDt",
-    "9rnDz342q6zMzptbJPnHKzr2aG91yE1hqRzYMXjnaEjS",
-    "2uRz6uBo1TrAApZdfMxRctz4MLAoTCaJHFtmkKqQ4S95",
-    "CheqNivqXubBrojvyuNeaySc5hvKyFyGV6toHm49ivRq",
-    "FL3EJeYP6i7ouTEKCiuW77Rigc2HXd6FyvGfGpnk3X7z",
+    "Bgokg3jutarxEMWQVospwUucSQfpG6Jw27jRbMxcvU2q",
+    "28YSwogXw2JdKLJ8AgK2nWy6k39jpB7hqrhe1AV18QpD",
+    "498SWfPJisr26J4oCiZccyzReFrByNE7jsHwbm3caNma",
+    "CyaE1VxvBrahnPWkqm5VsdCvyS2QmNht2UFrKJHga54o",
+    "97fVD4SLcrcTr16kdgTS9Gq5kJFaP3N2HXAEm1PJRKqv",
     "3KvsoNxgn64nsuHKPBHQJsguef3DgEkP2izE49k6CSAZ",
-    "3bvHzPNxn3kDecfMkHsmXhDAvvZt6uJfsC3teUAaLBMg",
+    "Bi4rd5FH5bYEN8scZ7wevxNZyNmKHdaBcvewdPFxYdLt",
     "HxjwdF326ZunmUwC1iXhfgL3ku78YsksN6n7Rfxzwr6b",
     "2QfBNK2WDwSLoUQRb1zAnp3KM12N9hQ8q6ApwUMnWW2T",
     "gtagyESa99t49VmUqnnfsuowYnigSNKuYXdXWyXWNdd",
     "JD6rVaerbyz6wjQ433nrw6bFTgFrp46MiYmi8EtUAfsG",
-    "4jjEXcFPXw7WVGXSTb227HW6wfLprjh2RtiHty4GbetE",
+    "5gn3uxhsZ7TtLDZwxKXPJuUTB9dEMgnb3oFJ6rKDjoX4",
     "Gghj6515zeefxS2Dv7vwSSGyWqtASJFojuLwVMFsc6FN",
-    "7moqFjvm2MwAiMtCZoqYoTAPzRBxxMRT2ddyHThQuWjr",
-    "HU3SkjiHpeNMvRgiYEbfFTWXHwq5CMKn1HCgu4MkkGhE",
+    "2EYVKHYQKC7goT3eB3iCYPp8gKsPVj6QMyUzy1oQay6a",
+    "AQ3MK4mf4i4r3G9rkbAvfoxGP6eZ7yscuiy5Syyuq27U",
     "A7FMMgue4aZmPLLoutVtbC7gJcyqkHybUieiaDg9aaVE",
     "GNoYNXQ66dnTqcR39nKi2QJSizjxvHHAy9GSbNszQuuq",
     "roUteHjDohtkatXTb79PJ99bbxkTipgo3GJ4EJZ1YpB",
@@ -130,14 +131,18 @@ FALLBACK_WALLETS = [
     "UUAhspPgUdGuXUnokmxERH1VvNGNh1ouN3mfcbfV8yd",
     "eLLnsiBsWvERB34kgiJ4wPhdRzqM17gMG4cHouMqaHz",
     "8pY1AukbuPgUE3EetyLa59rFLMimJGT94ZzbMEZcQF4w",
-    "MRiYA4oN3158fCV8evhuCofrDzbHyYvYnGZUDJvoCsa",
-    "CatyeC3LgBxub7HcpW2n7cZZZ66CUKdcZ8DzHucHrSiP",
+    "77eg8ZALn2CuEs2ErACpBsuzcG5nRoDkK2eyrGQNfxD2",
+    "3xBmQQijfUghKXmnvjUKFEwrobxV2gmz2mYvFPoLoG4C",
     "Ft6fZtTtL5EJANevdXwcSvD4Lum8QMTMepF9zjvFPh2X",
     "CQwT1byuHgjKnL6vzmuNaAywKfDBVxDmFVgsQDBWxcWt",
     "yUwUyoufLrCmjcgURefVzvAfpcaZ2so6be4uDziT9aH",
     "8NQ32SyFKD1d5kenq4oM8Da6C6J9TQSMW1uAgFRveEQr",
-    "Gpji3gCNBywt89bYr3z5GcQC32rs8qDBy7iiHzEEvrGC",
-
+    "pau23UpU2BFwF4JZrLxAnf4ZqgnD3xLnz6ESu7vPsao",
+    "EDBvw6czdnJMWP1ZXRTrAArE4ha1FoND2E34cDKHtV3J",
+    "54qjvmfmUkcfsQm6aJURegHPcvB2QjY8z2w6ZkFx2cjc",
+    "EciGzv86MdB6zLHkoLPLiAyU37BQmpJyY7yQb7SPG9zS",
+    "6qudAN2kV8mtCcYJxb5QQ6Vr15itdHHdeVbYm99NKMhy",
+    "4iaJQWCdr9iBqh2DUDVhaf5DeLi1mZBZLHanvbTLGFbv",
 ]
 # ═══════════════════════════════════════════════════════════════════════════════
 #  INTERNALS
