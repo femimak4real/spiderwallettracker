@@ -22,7 +22,7 @@ Solana Wallet Convergence Alert Bot  — SpiderWalletBot
 - Visual card with PIL, safe HTML captions (text fallback if PIL fails)
 """
 
-import os, time, logging, math, requests, threading, io, importlib
+import os, time, logging, math, requests, threading, io, importlib, pytz
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from flask import Flask, request, jsonify
@@ -153,7 +153,12 @@ logger = logging.getLogger(__name__)
 
 app       = Flask(__name__)
 bot       = Bot(token=TELEGRAM_TOKEN)
-scheduler    = BackgroundScheduler() if BackgroundScheduler else None
+
+scheduler = (
+    BackgroundScheduler(timezone=pytz.UTC)
+    if BackgroundScheduler
+    else None
+)
 _tx_executor = ThreadPoolExecutor(max_workers=8, thread_name_prefix="tx_worker")
 
 # ═══════════════════════════════════════════════════════════════════════════════
