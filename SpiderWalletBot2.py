@@ -97,13 +97,13 @@ else:
 BOT_VERSION = "v3.2"
 START_TIME  = time.time()   # captured at module import — used for uptime / "Started At"
 
-THRESHOLD        = 6      # base wallet count threshold (adaptive adjusts ±1)
+THRESHOLD        = 5      # base wallet count threshold (adaptive adjusts ±1)
 WINDOW           = 180    # seconds — buy convergence window (2 minutes)
 ALERT_COOLDOWN   = 900    # seconds — suppress repeat buy alerts per token
 SELL_WINDOW      = 86400    # seconds — sell convergence window
 MIN_HOLD_TIME    = 600    # seconds — minimum time after buy alert before sell alert fires
 FAST_DUMP_MIN_SELLERS = 3  # if this many original buy wallets sell together, alert bypasses MIN_HOLD_TIME
-MIN_MCAP         = 50_000
+MIN_MCAP         = 50_000  # USD — skip tokens below this market cap
 MAX_MCAP         = 5_000_000  # USD — skip tokens already above this market cap
 REFRESH_HOURS    = 720    # 30 days — one webhook registration per month
 
